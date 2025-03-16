@@ -74,6 +74,7 @@ except ImportError:
 
 try:
     import smbus
+    import RPi.GPIO as GPIO  # AGGIUNTO
     from picamera2 import Picamera2, Preview
     from libcamera import Transform
     from libcamera import controls
@@ -6675,18 +6676,77 @@ def main(argv):
     report_usage()
 
     # *** ALT-Scann8 load complete ***
+    # *** ALT-Scann8 load complete ***
+    
+    
+#**********************************
+#**********************************
+
+    # Inizializzazione I2C bus
+    bus = smbus.SMBus(1)  # Bus I2C 1 per Raspberry Pi
+
+    # Configurazione per il pannello Pico
+    PICO_I2C_ADDR = 0x08
+    ARDUINO_I2C_ADDR = 0x10
+    INT_PIN = 23
+    GUI_ACTIVE_PIN = 24
+    update_gui = False  # Variabile globale
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(INT_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+    GPIO.setup(GUI_ACTIVE_PIN, GPIO.OUT)
+    GPIO.output(GUI_ACTIVE_PIN, GPIO.LOW)
+    def handle_interrupt(channel):
+        global update_gui
+        print("[DEBUG] Interrupt rilevato su INT_PIN")  # Aggiunto per debug
+        update_gui = True
+    GPIO.add_event_detect(INT_PIN, GPIO.RISING, callback=handle_interrupt)
+    def check_panel_commands(win):
+        global update_gui  # Usiamo la variabile globale
+        print("[LOG] Inizio check_panel_commands") # TEMP_LOG_5
+        try:
+            bus.read_byte(PICO_I2C_ADDR)
+            print("[LOG] Lettura byte da Pico OK") # TEMP_LOG_6
+            GPIO.output(GUI_ACTIVE_PIN, GPIO.HIGH)
+        except Exception as e:
+            print(f"[LOG] Errore lettura Pico: {e}") # TEMP_LOG_7
+            GPIO.output(GUI_ACTIVE_PIN, GPIO.LOW)
+            update_gui = False
+            win.after(200, lambda: check_panel_commands(win))
+            return
+        print(f"[DEBUG] Valore di update_gui prima di if: {update_gui}")  # Debug
+        if update_gui:
+            print("[LOG] update_gui attivo, leggo comando") # TEMP_LOG_8
+            command = bus.read_byte(PICO_I2C_ADDR)
+            print(f"[LOG] Comando letto: {command}") # TEMP_LOG_9
+            if command == 10:
+                print("[LOG] Invio CMD_START_SCAN ad Arduino") # TEMP_LOG_10
+                send_arduino_command(10)
+                print("[LOG] Invio risposta 1 a Pico") # TEMP_LOG_11
+                bus.write_byte(PICO_I2C_ADDR, 1)
+            update_gui = False
+        win.after(200, lambda: check_panel_commands(win))
+
+#**********************************
+#**********************************
 
     if hw_panel_installed:
         hw_panel.ALT_Scann8_init_completed()
 
     onesec_periodic_checks()
-
+    
+    # Avvia il controllo del pannello # AGGIUNTO
+    check_panel_commands(win)  # AGGIUNTO
+    
     # Main Loop
     win.mainloop()  # running the loop that works as a trigger
 
+    # Pulizia GPIO alla chiusura # AGGIUNTO
+    GPIO.output(GUI_ACTIVE_PIN, GPIO.LOW)  # Spegne il LED hardware
+    GPIO.cleanup()  # Resetta i pin GPIO
     if not SimulatedRun and not CameraDisabled:
         camera.close()
 
 
 if __name__ == '__main__':
     main(sys.argv[1:])
+    
