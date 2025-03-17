@@ -73,7 +73,8 @@ except ImportError:
     check_disk_space = False
 
 try:
-    import smbus
+    import smbus2
+    import RPi.GPIO as GPIO
     from picamera2 import Picamera2, Preview
     from libcamera import Transform
     from libcamera import controls
@@ -4367,7 +4368,7 @@ def tscann8_init():
     logging.debug("BaseFolder=%s", BaseFolder)
 
     if not SimulatedRun:
-        i2c = smbus.SMBus(1)
+        i2c = smbus2.SMBus(1)
         # Set the I2C clock frequency to 400 kHz
         i2c.write_byte_data(16, 0x0F, 0x46)  # I2C_SCLL register
         i2c.write_byte_data(16, 0x10, 0x47)  # I2C_SCLH register
