@@ -6676,6 +6676,14 @@ def main(argv):
     report_usage()
 
     # *** ALT-Scann8 load complete ***
+    # *** ALT-Scann8 load complete ***   NON ELIMINARE
+    # *** ALT-Scann8 load complete ***   NON ELIMINARE
+
+    # ---> snippet
+
+    # ------ FINE di snippet xxxx.py
+    #********************************** non  eliminare
+    #********************************** non  eliminare
 
     if hw_panel_installed:
         hw_panel.ALT_Scann8_init_completed()
